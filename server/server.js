@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT;
 
 const allowedOrigins = [
-  'http://localhost:5173', // Default Vite dev server'
+  'https://mockbook-pro.vercel.app/',
 ];
 
 app.use(cors({
