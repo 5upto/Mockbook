@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT;
 
 const allowedOrigins = [
-  'https://mockbook-pro.vercel.app/',
+  'https://mockbook-pro.vercel.app',
 ];
 
 app.use(cors({
