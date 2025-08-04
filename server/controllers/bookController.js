@@ -75,7 +75,7 @@ class BookController {
       const [bookPage, bookIndex] = bookId.split('-').map(num => parseInt(num));
       const actualIndex = bookPage * 20 + bookIndex;
 
-      const book = dataGenerator.generateBook(actualIndex, locale, seed, bookPage);
+      const book = dataGenerator.generateBook(actualIndex, locale, seed, bookPage, parseFloat(averageLikes), parseFloat(averageReviews));
       book.likes = dataGenerator.generateLikes(book.seed, parseFloat(averageLikes));
       book.reviews = dataGenerator.generateReviews(book.seed, parseFloat(averageReviews), locale);
       book.cover = dataGenerator.generateBookCover(book.title, book.authors, book.seed);

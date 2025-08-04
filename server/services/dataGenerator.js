@@ -1,7 +1,7 @@
 const seedrandom = require('seedrandom');
 const { faker: baseFaker } = require('@faker-js/faker');
 
-// Pre-load all supported locales
+// all supported locales
 const locales = {
   'en-US': require('@faker-js/faker/locale/en'),
   'de-DE': require('@faker-js/faker/locale/de'),
@@ -29,7 +29,7 @@ class DataGenerator {
         faker = require('@faker-js/faker/locale/en').faker;
       }
       
-      // CRITICAL: Override Faker's internal random function with our seeded RNG
+      // Override Faker's internal random function with our seeded RNG
       if (rng && faker) {
         // Store original random function
         const originalRandom = faker.datatype ? faker.datatype.number : null;
@@ -80,9 +80,9 @@ class DataGenerator {
     return `${prefix}-${group}-${publisher}-${title}-${checkDigit}`;
   }
 
-  generateBook(index, locale, userSeed, page = 0) {
+  generateBook(index, locale, userSeed, page = 0, averageLikes = 0, averageReviews = 0) {
     try {
-      const seed = `${userSeed}-${page}-${index}`;
+      const seed = `${userSeed}-${page}-${index}-${averageLikes}-${averageReviews}`;
       const rng = this.generateSeededRandom(seed);
       const faker = this.getFaker(locale, rng);
       
@@ -155,7 +155,6 @@ class DataGenerator {
       
       let title = generateTitlePattern();
       
-      // Add variations like subtitles 30% of the time
       if (rng() > 0.7) {
         const subtitleConnectors = {
           'en-US': [': ', ' - ', ': A '],
@@ -171,7 +170,6 @@ class DataGenerator {
         title += connector + subtitle;
       }
       
-      // Apply title case for all languages
       title = title.split(' ')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
@@ -196,11 +194,9 @@ class DataGenerator {
       // Generate names based on locale-specific patterns
       const nameGenerators = {
         'en-US': () => {
-          // English: FirstName LastName
           return `${faker.person.firstName()} ${faker.person.lastName()}`;
         },
         'de-DE': () => {
-          // German: FirstName MiddleName LastName (sometimes with von/zu)
           const hasMiddleName = rng() > 0.5;
           const hasNobility = rng() > 0.8;
           
@@ -217,7 +213,6 @@ class DataGenerator {
           return `${name} ${faker.person.lastName()}`;
         },
         'fr-FR': () => {
-          // French: FirstName (sometimes with hyphen) LastName (sometimes with de/du/la)
           const hasHyphen = rng() > 0.7;
           const hasParticle = rng() > 0.7;
           
@@ -301,13 +296,14 @@ class DataGenerator {
 
   generateLikes(bookSeed, averageLikes) {
     const rng = this.generateSeededRandom(`${bookSeed}-likes`);
-    const wholePart = Math.floor(averageLikes);
-    const fractionalPart = averageLikes - wholePart;
     
-    let likes = wholePart;
-    if (rng() < fractionalPart) {
-      likes += 1;
-    }
+    const variance = Math.max(1, averageLikes * 0.3);
+    const randomOffset = (rng() - 0.5) * 2 * variance;
+    
+    let likes = Math.round(averageLikes + randomOffset);
+    
+    likes = Math.max(0, likes);
+    likes = Math.max(0, likes);
     
     return likes;
   }
@@ -315,11 +311,17 @@ class DataGenerator {
   generateReviews(bookSeed, averageReviews, locale) {
     try {
       const reviewRng = this.generateSeededRandom(`${bookSeed}-reviews`);
-      const reviewCount = Math.min(Math.max(1, Math.floor(reviewRng() * 10)), 10); // 1-10 reviews
+      
+      const variance = Math.max(1, averageReviews * 0.3);
+      const randomOffset = (reviewRng() - 0.5) * 2 * variance;
+      
+      let reviewCount = Math.round(averageReviews + randomOffset);
+      
+      reviewCount = Math.min(Math.max(0, reviewCount), 50);
+      reviewCount = Math.min(Math.max(0, reviewCount), 50);
       const reviews = [];
       const faker = this.getFaker(locale);
       
-      // Define review templates based on locale
       const reviewTemplates = {
         'en-US': {
           positive: [
@@ -374,7 +376,6 @@ class DataGenerator {
         }
       };
       
-      // Get the appropriate templates for the current locale, default to English
       const templates = reviewTemplates[locale] || reviewTemplates[this.defaultLocale];
       
       for (let i = 0; i < reviewCount; i++) {
@@ -443,7 +444,7 @@ class DataGenerator {
 
     for (let i = 0; i < pageSize; i++) {
       const bookIndex = startIndex + i;
-      const book = this.generateBook(bookIndex, locale, userSeed, page);
+      const book = this.generateBook(bookIndex, locale, userSeed, page, averageLikes, averageReviews);
       
       book.likes = this.generateLikes(book.seed, averageLikes);
       book.reviews = this.generateReviews(book.seed, averageReviews, locale);
@@ -471,7 +472,6 @@ DataGenerator.prototype.insertBooksToDB = async function(page, pageSize, locale,
   const connection = connectDB();
   const books = this.generateBooks(page, pageSize, locale, userSeed, averageLikes, averageReviews);
 
-  // Ensure books table exists
   await connection.execute(`
     CREATE TABLE IF NOT EXISTS books (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -485,7 +485,6 @@ DataGenerator.prototype.insertBooksToDB = async function(page, pageSize, locale,
     )
   `);
 
-  // Bulk insert books
   const insertQuery = `INSERT INTO books (isbn, title, authors, publisher, likes, reviews, cover)
     VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
