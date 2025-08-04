@@ -14,19 +14,57 @@ class DataGenerator {
     this.defaultLocale = 'en-US';
   }
 
-  getFaker(locale) {
+  getFaker(locale, rng) {
     // Use the specified locale or fall back to default
     const selectedLocale = this.locales.includes(locale) ? locale : this.defaultLocale;
     
-    // Return a new faker instance with the selected locale
-    const fakerInstance = { ...baseFaker };
-    fakerInstance.locale = locale;
-    
-    // Add locale-specific methods
-    const localeData = locales[selectedLocale];
-    Object.assign(fakerInstance, localeData);
-    
-    return fakerInstance;
+    // Import faker with the specific locale
+    try {
+      let faker;
+      if (selectedLocale === 'de-DE') {
+        faker = require('@faker-js/faker/locale/de').faker;
+      } else if (selectedLocale === 'fr-FR') {
+        faker = require('@faker-js/faker/locale/fr').faker;
+      } else {
+        faker = require('@faker-js/faker/locale/en').faker;
+      }
+      
+      // CRITICAL: Override Faker's internal random function with our seeded RNG
+      if (rng && faker) {
+        // Store original random function
+        const originalRandom = faker.datatype ? faker.datatype.number : null;
+        
+        // Override the internal random number generator
+        if (faker.helpers && faker.helpers.arrayElement) {
+          const originalArrayElement = faker.helpers.arrayElement;
+          faker.helpers.arrayElement = function(array) {
+            if (!array || array.length === 0) return undefined;
+            const index = Math.floor(rng() * array.length);
+            return array[index];
+          };
+        }
+        
+        // Override number generation
+        if (faker.datatype) {
+          faker.datatype.number = function(options = {}) {
+            const min = options.min || 0;
+            const max = options.max || 99999;
+            return Math.floor(rng() * (max - min + 1)) + min;
+          };
+        }
+        
+        // Override the core random function if available
+        if (faker.mersenne) {
+          faker.mersenne.rand = rng;
+        }
+      }
+      
+      return faker;
+    } catch (error) {
+      console.error('Error setting up faker:', error);
+      const { faker: defaultFaker } = require('@faker-js/faker');
+      return defaultFaker;
+    }
   }
 
   generateSeededRandom(seed) {
@@ -46,20 +84,20 @@ class DataGenerator {
     try {
       const seed = `${userSeed}-${page}-${index}`;
       const rng = this.generateSeededRandom(seed);
-      const faker = this.getFaker(locale);
+      const faker = this.getFaker(locale, rng);
       
       // Generate book data with fallbacks
       const title = this._generateTitle(faker, rng);
-      const author = this._generateAuthorName(faker);
+      const author = this._generateAuthorName(faker, rng);
       
       return {
         index: index + 1,
         isbn: this.generateISBN(rng),
         title: title,
         authors: [author],
-        publisher: this._generatePublisher(faker),
-        publishedYear: this._generatePublishedYear(faker),
-        pageCount: this._generatePageCount(faker),
+        publisher: this._generatePublisher(faker, rng),
+        publishedYear: this._generatePublishedYear(faker, rng),
+        pageCount: this._generatePageCount(faker, rng),
         seed: seed
       };
     } catch (error) {
@@ -151,7 +189,7 @@ class DataGenerator {
     }
   }
   
-  _generateAuthorName(faker) {
+  _generateAuthorName(faker, rng) {
     try {
       const locale = faker.locale || 'en-US';
       
@@ -163,8 +201,8 @@ class DataGenerator {
         },
         'de-DE': () => {
           // German: FirstName MiddleName LastName (sometimes with von/zu)
-          const hasMiddleName = Math.random() > 0.5;
-          const hasNobility = Math.random() > 0.8;
+          const hasMiddleName = rng() > 0.5;
+          const hasNobility = rng() > 0.8;
           
           let name = faker.person.firstName();
           if (hasMiddleName) {
@@ -172,7 +210,7 @@ class DataGenerator {
           }
           
           if (hasNobility) {
-            const nobility = ['von', 'zu', 'von der', 'von und zu'][Math.floor(Math.random() * 4)];
+            const nobility = ['von', 'zu', 'von der', 'von und zu'][Math.floor(rng() * 4)];
             return `${name} ${nobility} ${faker.person.lastName()}`;
           }
           
@@ -180,8 +218,8 @@ class DataGenerator {
         },
         'fr-FR': () => {
           // French: FirstName (sometimes with hyphen) LastName (sometimes with de/du/la)
-          const hasHyphen = Math.random() > 0.7;
-          const hasParticle = Math.random() > 0.7;
+          const hasHyphen = rng() > 0.7;
+          const hasParticle = rng() > 0.7;
           
           let firstName = faker.person.firstName();
           if (hasHyphen) {
@@ -190,7 +228,7 @@ class DataGenerator {
           
           let lastName = faker.person.lastName();
           if (hasParticle) {
-            const particle = ['de', 'du', 'de la', 'le'][Math.floor(Math.random() * 4)];
+            const particle = ['de', 'du', 'de la', 'le'][Math.floor(rng() * 4)];
             lastName = `${particle} ${lastName}`;
           }
           
@@ -206,7 +244,7 @@ class DataGenerator {
     }
   }
   
-  _generatePublisher(faker) {
+  _generatePublisher(faker, rng) {
     try {
       const locale = faker.locale || 'en-US';
       const suffixes = {
@@ -216,7 +254,7 @@ class DataGenerator {
       };
       
       const suffixList = suffixes[locale] || suffixes['en-US'];
-      const suffix = suffixList[Math.floor(Math.random() * suffixList.length)];
+      const suffix = suffixList[Math.floor(rng() * suffixList.length)];
       
       const name = faker.company?.name?.() || 'Publishing';
       return `${name} ${suffix}`.trim();
@@ -227,17 +265,18 @@ class DataGenerator {
     }
   }
   
-  _generatePublishedYear(faker) {
+  _generatePublishedYear(faker, rng) {
     try {
-      return faker.date?.past?.(10, new Date())?.getFullYear?.() || new Date().getFullYear();
+      const year = Math.floor(rng() * 10) + new Date().getFullYear() - 10;
+      return year;
     } catch (e) {
       return new Date().getFullYear();
     }
   }
   
-  _generatePageCount(faker) {
+  _generatePageCount(faker, rng) {
     try {
-      return faker.number?.int?.({ min: 100, max: 800 }) || 300;
+      return Math.floor(rng() * 700) + 100;
     } catch (e) {
       return 300;
     }

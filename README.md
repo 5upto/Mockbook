@@ -1,12 +1,121 @@
-# React + Vite
+# Mockbook
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack book store application built with React, Vite, and Node.js with Express. The application generates and displays realistic fake book data for testing and demonstration purposes.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+-  Browse books with infinite scroll
+-  Search functionality to find specific books
+-  Responsive design that works on all devices
+-  Modern UI built with Tailwind CSS
+-  Real-time data generation and filtering
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Frontend
+- React 19
+- Vite
+- Tailwind CSS
+- Axios for API calls
+- React Infinite Scroll Component
+- Font Awesome Icons
+
+### Backend
+- Node.js with Express
+- MySQL database
+- Faker.js for generating realistic book data
+- CORS enabled for secure cross-origin requests
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v14 or higher)
+- npm or yarn
+- MySQL Server
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/5upto/Mockbook
+   cd Mockbook
+   ```
+
+2. Install server dependencies:
+   ```bash
+   cd server
+   npm install
+   ```
+
+3. Install client dependencies:
+   ```bash
+   cd ../client
+   npm install
+   ```
+
+4. Set up environment variables:
+   - Create a `.env` file in the `server` directory with your database credentials:
+     ```
+     DB_HOST=your_database_host
+     DB_USER=your_database_user
+     DB_PASSWORD=your_database_password
+     DB_NAME=your_database_name
+     PORT=5000
+     ```
+
+### Running the Application
+
+1. Start the backend server:
+   ```bash
+   cd server
+   node server.js
+   ```
+
+2. In a new terminal, start the frontend development server:
+   ```bash
+   cd client
+   npm run dev
+   ```
+
+3. Open your browser and navigate to `http://localhost:5173`
+
+## Project Structure
+
+```
+book-store/
+├── client/                 
+│   ├── public/             
+│   ├── src/
+│   │   ├── assets/         
+│   │   ├── components/    
+│   │   ├── contexts/       
+│   │   └── services/       
+│   └── ...
+│
+└── server/                 
+    ├── config/            
+    ├── controllers/       
+    ├── routes/           
+    ├── services/        
+    └── server.js        
+```
+
+## Available Scripts
+
+### Client
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run ESLint
+- `npm run preview` - Preview production build
+
+### Server
+- `nodemon server.js` - Start production server
+- `node server.js` - Start development server with nodemon
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
